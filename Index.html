@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <!-- 引入 Tailwind CSS 與 Google 字體 -->
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body { 
+      font-family: 'M PLUS Rounded 1c', sans-serif; 
+      background-color: #fffaf0; 
+      color: #5d4037;
+    }
+    
+    /* 日系手繪感邊框 */
+    .hand-drawn-border {
+      border: 3px solid #5d4037;
+      border-radius: 255px 15px 225px 15px/15px 225px 15px 255px;
+    }
+
+    /* 便條紙顏色樣式 (淡色系) */
+    .note-red { background-color: #ffe4e6; border: 2px solid #fda4af; }
+    .note-blue { background-color: #e0f2fe; border: 2px solid #bae6fd; }
+    .note-purple { background-color: #f3e8ff; border: 2px solid #e9d5ff; }
+
+    /* 顏色按鈕被選中的效果 */
+    .color-ring { ring-offset-2: 2px; ring-2: 4px; ring-gray-400: 1; }
+    .selected-color { outline: 3px solid #8b5cf6; outline-offset: 2px; }
+
+    /* 筆記本裝訂線 */
+    .notebook-spine {
+      border-left: 12px solid #eecfa1;
+    }
+
+    /* 滾動條美化 */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; }
+    ::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 10px; }
+  </style>
+</head>
+<body class="p-4 md:p-10">
+
+  <div class="max-w-6xl mx-auto">
+    <!-- 標題 -->
+    <header class="text-center mb-8">
+      <h1 class="text-3xl font-bold tracking-wider">🧸 我的日系手繪便條紙 🧸</h1>
+      <p class="text-sm text-gray-500 mt-2">記錄每一天的點點滴滴</p>
+    </header>
+
+    <!-- 筆記本主容器 -->
+    <div class="flex flex-col md:flex-row bg-white rounded-3xl shadow-2xl overflow-hidden notebook-spine min-h-[650px] border-2 border-gray-100">
+      
+      <!-- 左側：輸入區域 -->
+      <div class="w-full md:w-5/12 p-8 border-b-2 md:border-b-0 md:border-r-2 border-dashed border-gray-200 bg-white">
+        <div class="flex items-center gap-2 mb-6">
+          <span class="text-2xl">✍️</span>
+          <h2 class="text-xl font-bold">寫下新任務</h2>
+        </div>
+        
+        <div class="space-y-6">
+          <!-- 日期選擇 -->
+          <div>
+            <label class="block text-sm font-bold text-gray-400 mb-2 ml-1">選擇日期</label>
+            <input type="date" id="taskDate" class="w-full p-3 hand-drawn-border outline-none bg-white">
+          </div>
+
+          <!-- 內容輸入 -->
+          <div>
+            <label class="block text-sm font-bold text-gray-400 mb-2 ml-1">內容</label>
+            <textarea id="taskContent" placeholder="在此輸入待辦事項..." 
+              class="w-full p-4 hand-drawn-border h-40 outline-none bg-yellow-50/20 resize-none"></textarea>
+          </div>
+          
+          <!-- 顏色選擇 -->
+          <div>
+            <label class="block text-sm font-bold text-gray-400 mb-2 ml-1">便條顏色</label>
+            <div class="flex gap-4 items-center">
+              <button onclick="setColor('note-red', this)" id="defaultColor" class="w-10 h-10 rounded-full note-red cursor-pointer transition-transform hover:scale-110 selected-color"></button>
+              <button onclick="setColor('note-blue', this)" class="w-10 h-10 rounded-full note-blue cursor-pointer transition-transform hover:scale-110"></button>
+              <button onclick="setColor('note-purple', this)" class="w-10 h-10 rounded-full note-purple cursor-pointer transition-transform hover:scale-110"></button>
+            </div>
+          </div>
+
+          <!-- 按鈕區 -->
+          <div class="grid grid-cols-2 gap-4 pt-4">
+            <button onclick="handleSave('Today')" class="bg-yellow-400 hover:bg-yellow-500 text-white font-bold py-3 rounded-2xl shadow-md transition-all active:scale-95">加入今日</button>
+            <button onclick="handleSave('Pending')" class="bg-blue-400 hover:bg-blue-500 text-white font-bold py-3 rounded-2xl shadow-md transition-all active:scale-95">加入尚未完成</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 右側：顯示區域 -->
+      <div class="w-full md:w-7/12 p-8 bg-gray-50/50 overflow-y-auto max-h-[700px]">
+        
+        <!-- 今日待辦區塊 -->
+        <div class="mb-10">
+          <h3 class="text-lg font-bold text-rose-400 border-b-2 border-rose-200 mb-4 pb-1 flex items-center gap-2">
+            📍 今日待辦事項
+          </h3>
+          <div id="todayList" class="space-y-4">
+            <!-- 動態生成內容 -->
+          </div>
+        </div>
+        
+        <!-- 尚未完成區塊 -->
+        <div>
+          <h3 class="text-lg font-bold text-purple-400 border-b-2 border-purple-200 mb-4 pb-1 flex items-center gap-2">
+            ⏳ 尚未完成事項
+          </h3>
+          <div id="pendingList" class="space-y-4">
+            <!-- 動態生成內容 -->
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let selectedColor = 'note-red';
+    
+    // 初始化設定：日期與預設顏色
+    window.onload = () => {
+      document.getElementById('taskDate').valueAsDate = new Date();
+      refreshData();
+    };
+
+    function setColor(color, btn) {
+      selectedColor = color;
+      // 移除所有按鈕的選中樣式
+      document.querySelectorAll('.rounded-full').forEach(b => b.classList.remove('selected-color'));
+      // 加上當前按鈕的選中樣式
+      btn.classList.add('selected-color');
+    }
+
+    // 重新從後端抓取資料
+    function refreshData() {
+      google.script.run.withSuccessHandler(renderTasks).getTasks();
+    }
+
+    function handleSave(type) {
+      const content = document.getElementById('taskContent').value;
+      const date = document.getElementById('taskDate').value;
+      
+      if(!content.trim()) {
+        alert("請寫下內容喔！🥺");
+        return;
+      }
+
+      const task = { content, date, type, color: selectedColor };
+      
+      // 呼叫 GAS 後端
+      google.script.run
+        .withSuccessHandler((tasks) => {
+          renderTasks(tasks);
+          document.getElementById('taskContent').value = ''; // 清空輸入框
+        })
+        .withFailureHandler((err) => alert("出錯了: " + err))
+        .addTask(task);
+    }
+
+    function deleteTask(id) {
+      if(!confirm("確定要刪除這張便條紙嗎？")) return;
+      
+      google.script.run
+        .withSuccessHandler(renderTasks)
+        .withFailureHandler((err) => alert("刪除失敗: " + err))
+        .deleteTask(id);
+    }
+
+    function renderTasks(tasks) {
+      const todayList = document.getElementById('todayList');
+      const pendingList = document.getElementById('pendingList');
+      
+      todayList.innerHTML = '';
+      pendingList.innerHTML = '';
+
+      if (!tasks || tasks.length === 0) {
+        const emptyMsg = '<p class="text-gray-400 text-sm italic text-center py-4">目前空空如也～</p>';
+        todayList.innerHTML = emptyMsg;
+        pendingList.innerHTML = emptyMsg;
+      }
+
+      tasks.forEach(task => {
+        // 建立便條紙 HTML 結構
+        const cardHtml = `
+          <div class="${task.color} p-4 rounded-xl shadow-sm flex justify-between items-start transform transition-all hover:rotate-1 border-l-8 border-black/5 relative group">
+            <div class="flex-1">
+              <div class="text-xs font-bold opacity-50 mb-1">📅 ${task.date}</div>
+              <div class="text-gray-800 whitespace-pre-wrap">${task.content}</div>
+            </div>
+            <button onclick="deleteTask('${task.id}')" 
+              class="ml-2 bg-white/50 hover:bg-white text-red-400 rounded-full w-8 h-8 flex items-center justify-center transition shadow-sm">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+              </svg>
+            </button>
+          </div>
+        `;
+        
+        if(task.type === 'Today') {
+          todayList.innerHTML += cardHtml;
+        } else {
+          pendingList.innerHTML += cardHtml;
+        }
+      });
+    }
+  </script>
+</body>
+</html>
